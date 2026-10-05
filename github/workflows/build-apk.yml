@@ -1,0 +1,71 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare web files
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js www/
+          cp -r icons www/
+
+      - name: Create project files
+        run: |
+          echo '{ "name": "bustan-alhuruf", "version": "1.0.0", "private": true }' > package.json
+          echo '{ "appId": "com.personal.bustanalhuruf", "appName": "Bustan Alhuruf", "webDir": "www" }' > capacitor.config.json
+
+      - name: Install Capacitor
+        run: npm install --legacy-peer-deps @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest @capacitor-community/text-to-speech@latest
+
+      - name: Add Android platform
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: App name, icon and TTS permission
+        run: |
+          RES=android/app/src/main/res
+          sed -i 's|<string name="app_name">.*</string>|<string name="app_name">بستان الحروف</string>|' $RES/values/strings.xml
+          sed -i 's|<string name="title_activity_main">.*</string>|<string name="title_activity_main">بستان الحروف</string>|' $RES/values/strings.xml
+          rm -rf $RES/mipmap-anydpi-v26
+          for d in $RES/mipmap-*; do
+            cp icons/icon-192.png $d/ic_launcher.png
+            cp icons/icon-192.png $d/ic_launcher_round.png
+            cp icons/icon-192.png $d/ic_launcher_foreground.png
+          done
+          MAN=android/app/src/main/AndroidManifest.xml
+          grep -q TTS_SERVICE $MAN || sed -i 's|</manifest>|    <queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent></queries>\n</manifest>|' $MAN
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bustan-alhuruf-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
