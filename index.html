@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>بستان الحروف</title>
 <style>
-:root{--p:#6C4BD8;--p2:#8F75F0;--bg:#FFF8EC;--ink:#2B2340;--mut:#7A7290;--ok:#2DBE7E;--bad:#FF5E6C;--y:#FFC93C;--o:#FF9F45}
+:root{--p:#6C4BD8;--p2:#8F75F0;--bg:#FFF8EC;--ink:#2B2340;--mut:#7A7290;--ok:#2DBE7E;--bad:#FF5E6C;--y:#FFC93C;--o:#FF9F45;--b:#3FA9F5;--g:#4CC38A;--pk:#FF7EB6}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;min-height:100%}
 body{font-family:'Noto Sans Arabic','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);overscroll-behavior:none;user-select:none;-webkit-user-select:none}
@@ -69,7 +69,7 @@ h3{font-size:17px;color:var(--p)}
 .chip.on{background:var(--p);color:#fff;box-shadow:0 3px 0 #4A2FB0}
 .hgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .hgrid.three{grid-template-columns:repeat(3,1fr)}
-.hb{border:0;border-radius:18px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;color:var(--ink);transition:transform .2s}
+.hb{border:0;border-radius:18px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;color:var(--ink)}
 .hb .ar{font-size:44px;line-height:1.5}
 .hb small{font-size:12px;color:var(--mut)}
 .c0{background:#FFE3EF}.c1{background:#E2F2FF}.c2{background:#E4F8EE}.c3{background:#FFF1D6}
@@ -106,7 +106,7 @@ h3{font-size:17px;color:var(--p)}
 .tl{border:0;width:72px;height:80px;border-radius:18px;background:#fff;box-shadow:0 5px 0 #E6DEFF;font-size:44px;color:var(--ink)}
 .tl.used{visibility:hidden}
 .mem{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.mc{border:0;height:96px;border-radius:18px;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;font-size:36px;box-shadow:0 4px 0 #4A2FB0}
+.mc{border:0;height:96px;border-radius:18px;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;font-size:36px;box-shadow:0 4px 0 #4A2FB0;transition:transform .25s}
 .mc .front{display:none}.mc.open{background:#fff;color:var(--ink);box-shadow:0 4px 0 #E6DEFF}
 .mc.open .front{display:block}.mc.open .back{display:none}
 .mc .front.ar{font-size:26px}.mc .front.em{font-size:44px}
@@ -303,8 +303,8 @@ function hName(u){
   return '';
 }
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();};
-const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
+/* مجموعة كلمات الألعاب (بدون تكرار الصور) */
 const POOL=(()=>{const seen=new Set(),out=[];[...LETTERS.flatMap(l=>l.w),...DICT.flatMap(d=>d.w)].forEach(w=>{if(!seen.has(w[1])&&!/\d/.test(w[1])){seen.add(w[1]);out.push(w);}});return out;})();
 
 /* ===================== الحفظ ===================== */
@@ -316,6 +316,8 @@ function newProfile(name,avatar){return{id:Date.now().toString(36),name,avatar,s
 function addStar(n=1){const p=P();if(!p)return;p.stars+=n;save();updateStars();}
 function rec(g,ok,letter){const p=P();if(!p)return;const s=p.games[g]||(p.games[g]={t:0,c:0,played:0});s.t++;if(ok)s.c++;if(letter){const m=ok?p.ok:p.err;m[letter]=(m[letter]||0)+1;}save();}
 function updateStars(){const p=P();$('#stars').textContent='⭐ '+(p?p.stars:0);}
+
+/* وقت التعلّم */
 setInterval(()=>{if(document.visibilityState==='visible'&&P()){const p=P(),d=today();p.secs[d]=(p.secs[d]||0)+15;save();}},15000);
 
 /* ===================== الصوت ===================== */
@@ -323,20 +325,20 @@ let arVoice=null;
 function loadVoices(){if(!('speechSynthesis' in window))return;const v=speechSynthesis.getVoices();arVoice=v.find(x=>/^ar/i.test(x.lang))||null;}
 if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
 const isNative=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
-const NativeTTS=(isNative&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech)?Capacitor.Plugins.TextToSpeech:((isNative&&Capacitor.registerPlugin)?Capacitor.registerPlugin('TextToSpeech'):null);
+const NativeTTS=(isNative&&Capacitor.registerPlugin)?Capacitor.registerPlugin('TextToSpeech'):null;
 function say(text,rate){
   rate=rate||DB.rate||0.8;
   return new Promise(res=>{
     let done=false;const fin=()=>{if(!done){done=true;res();}};
     setTimeout(fin,1800+text.length*350);
-    if(NativeTTS){Promise.resolve(NativeTTS.stop()).catch(()=>{}).finally(()=>NativeTTS.speak({text,lang:'ar-SA',rate:rate,pitch:1.1,volume:1,category:'playback'}).then(fin).catch(fin));return;}
+    if(NativeTTS){NativeTTS.stop().catch(()=>{}).finally(()=>NativeTTS.speak({text,lang:'ar-SA',rate:rate,pitch:1.1,volume:1,category:'playback'}).then(fin).catch(fin));return;}
     if(!('speechSynthesis' in window)){fin();return;}
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text);u.lang='ar-SA';if(arVoice)u.voice=arVoice;u.rate=rate;u.pitch=1.1;u.onend=fin;u.onerror=fin;
     speechSynthesis.speak(u);
   });
 }
-function hush(){try{if(NativeTTS)Promise.resolve(NativeTTS.stop()).catch(()=>{});else if('speechSynthesis' in window)speechSynthesis.cancel();}catch(e){}}
+function hush(){try{if(NativeTTS)NativeTTS.stop().catch(()=>{});else if('speechSynthesis' in window)speechSynthesis.cancel();}catch(e){}}
 let AC;
 function tone(f,d,type='sine',v=.15,when=0){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);const t=AC.currentTime+when;o.start(t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.stop(t+d);}catch(e){}}
 function good(){tone(660,.15);tone(880,.25,'sine',.15,.12);burst();}
@@ -357,7 +359,7 @@ function goHome(){const n=stack.length-1;if(n>0)history.go(-n);}
 window.addEventListener('popstate',e=>{const d=(e.state&&e.state.d)||1;if(stack.length<=1)return;while(stack.length>Math.max(1,d))stack.pop();render();});
 
 /* ===================== الشاشات ===================== */
-function tile(onclick,ic,t,sub,col,wide){return `<button class="tile${wide?' wide':''}" style="background:${col}" onclick="${onclick}"><span class="ic">${ic}</span><span>${t}</span>${sub&&!wide?`<small>${sub}</small>`:''}</button>`;}
+function tile(onclick,ic,t,sub,col,wide){return `<button class="tile${wide?' wide':''}" style="background:${col}" onclick="${onclick}"><span class="ic">${ic}</span><span>${t}${wide?'':''}</span>${sub&&!wide?`<small>${sub}</small>`:''}</button>`;}
 
 function scrHome(){
   const p=P();setTitle('بستان الحروف');
@@ -378,6 +380,7 @@ function scrHome(){
   </div>`;
 }
 
+/* ---------- الملفّات الشخصيّة ---------- */
 function scrProfiles(){
   setTitle('من يتعلّم الآن؟');
   app.innerHTML=`${DB.profiles.map(p=>`<button class="pcard" data-id="${p.id}"><span class="av">${p.avatar}</span><span>${esc(p.name)}</span><span style="margin-inline-start:auto" class="mut">⭐ ${p.stars}</span></button>`).join('')}
@@ -460,6 +463,7 @@ function scrHarakat(sel){
   $$('.hb').forEach(h=>h.onclick=()=>{say(h.dataset.say);h.classList.add('shake');setTimeout(()=>h.classList.remove('shake'),400);});
   $('#all').onclick=async()=>{const id=++runId;const bs=$$('.hb').slice(0,4);for(const h of bs){if(id!==runId)return;h.style.transform='scale(1.12)';await say(h.dataset.say);h.style.transform='';await wait(250);}};
 }
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- القراءة التحليليّة ---------- */
 function scrReadList(){
@@ -665,7 +669,7 @@ function scrParents(){
 /* ===================== البداية ===================== */
 function start(){
   if(!DB.profiles.length)replaceRoot(scrAddChild);
-  else if(!P())replaceRoot(scrProfiles);
+  else if(!P()){replaceRoot(scrProfiles);}
   else replaceRoot(scrHome);
 }
 start();
