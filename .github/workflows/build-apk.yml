@@ -28,8 +28,9 @@ jobs:
       - name: Prepare web files
         run: |
           mkdir -p www
-          cp index.html manifest.json sw.js www/
-          cp -r icons www/
+          cp index.html www/
+          cp manifest.json sw.js www/ 2>/dev/null || true
+          cp -r icons www/ 2>/dev/null || true
 
       - name: Create project files
         run: |
@@ -44,19 +45,23 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: App name, icon and TTS permission
+      - name: App name, icon, voice and microphone permissions
         run: |
           RES=android/app/src/main/res
           sed -i 's|<string name="app_name">.*</string>|<string name="app_name">بستان الحروف</string>|' $RES/values/strings.xml
           sed -i 's|<string name="title_activity_main">.*</string>|<string name="title_activity_main">بستان الحروف</string>|' $RES/values/strings.xml
-          rm -rf $RES/mipmap-anydpi-v26
-          for d in $RES/mipmap-*; do
-            cp icons/icon-192.png $d/ic_launcher.png
-            cp icons/icon-192.png $d/ic_launcher_round.png
-            cp icons/icon-192.png $d/ic_launcher_foreground.png
-          done
+          if [ -f icons/icon-192.png ]; then
+            rm -rf $RES/mipmap-anydpi-v26
+            for d in $RES/mipmap-*; do
+              cp icons/icon-192.png $d/ic_launcher.png
+              cp icons/icon-192.png $d/ic_launcher_round.png
+              cp icons/icon-192.png $d/ic_launcher_foreground.png
+            done
+          fi
           MAN=android/app/src/main/AndroidManifest.xml
+          grep -q RECORD_AUDIO $MAN || sed -i 's|</manifest>|    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>|' $MAN
           grep -q TTS_SERVICE $MAN || sed -i 's|</manifest>|    <queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent></queries>\n</manifest>|' $MAN
+          cat $MAN
 
       - name: Build APK
         run: |
